@@ -1,0 +1,32 @@
+## SYSBENCH
+# Install: http://www.jamescoyle.net/how-to/1131-benchmark-mysql-server-performance-with-sysbench.
+# Stand-alone
+sudo sysbench oltp_read_write --table-size=10000 --threads=6 --time=60 --max-requests=0 --mysql-user='root' --mysql-password='password123' --mysql-db=sakila prepare
+sudo sysbench oltp_read_write --table-size=10000 --threads=6 --time=60 --max-requests=0 --mysql-user='root' --mysql-password='password123' --mysql-db=sakila run
+
+# Cluster (Performed in the master node)
+sudo sysbench oltp_read_write --table-size=10000 --threads=6 --time=60 --max-requests=0 --mysql-user='root' --mysql-password= --mysql-host=127.0.0.1 --mysql-db=sakila prepare
+sudo sysbench oltp_read_write --table-size=10000 --threads=6 --time=60 --max-requests=0 --mysql-user='root' --mysql-password= --mysql-host=127.0.0.1 --mysql-db=sakila run
+
+## POWERAPI
+# Install:
+sudo apt install -y default-jre
+sudo wget https://github.com/powerapi-ng/powerapi-scala/releases/download/4.2.1/powerapi-cli-4.2.1.tgz
+sudo tar xzf powerapi-cli-4.2.1.tgz
+
+# IN /powerapi-cli-4.2.1.tgz/conf/powerapy.conf, ADD: 
+powerapi.cpu.tdp = 35
+powerapi.cpu.tdp-factor = 0.7
+
+# BACK TO COMMAND LINE:
+pid=$(pidof mysqld)
+
+sudo ./bin/powerapi \
+    modules procfs-cpu-simple \
+    monitor \
+      --frequency 500 \
+      --pids $pid \
+      --file /tmp/data.txt \
+      duration 600 # 10 min (or enough for the test to run)
+
+# YOU CAN FIND THE OUTPUT IN /tmp/data.txt

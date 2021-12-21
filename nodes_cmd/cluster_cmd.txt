@@ -1,0 +1,77 @@
+# Begin with following the instructions on
+  https://stansantiago.wordpress.com/2012/01/04/installing-mysql-cluster-on-ec2/
+  
+# CORRECTION: Add my.cnf on both slaves:
+[mysqld]
+ndbcluster
+ndb-connectstring=172.31.91.95
+datadir=/opt/mysqlcluster/deploy/mysqld_data
+basedir=/opt/mysqlcluster/home/mysqlc
+port=3306
+
+# CORRECTION: edit config.ini (change private DNS depending on the instance in EC2):
+[ndb_mgmd]
+hostname=ip-172-31-91-95.ec2.internal
+datadir=/opt/mysqlcluster/deploy/ndb_data
+nodeid=1
+
+[ndbd default]
+noofreplicas=2
+datadir=/opt/mysqlcluster/deploy/ndb_data
+
+[ndbd]
+hostname=ip-172-31-81-75.ec2.internal
+nodeid=3
+
+[ndbd]
+hostname=ip-172-31-85-205.ec2.internal
+nodeid=4
+
+[mysqld]
+nodeid=50
+[mysqld]
+nodeid=51
+hostname=ip-172-31-81-75.ec2.internal
+[mysqld]
+nodeid=52
+hostname=ip-172-31-85-205.ec2.internal
+
+# AFTER INITIALIZING THE DATABASES ON ALL NODES:
+
+	# MASTER:
+	sudo /opt/mysqlcluster/home/mysqlc/bin/ndb_mgmd -f /opt/mysqlcluster/deploy/conf/config.ini --initial --configdir=/opt/mysqlcluster/deploy/conf
+	
+	# ON EACH SLAVE:
+	sudo /opt/mysqlcluster/home/mysqlc/bin/ndbd –initial -c ip-172-31-91-95.ec2.internal:1186
+	sudo /opt/mysqlcluster/home/mysqlc/bin/mysqld --defaults-file=/opt/mysqlcluster/deploy/conf/my.cnf --user=root &
+	
+	# MASTER:
+	sudo /opt/mysqlcluster/home/mysqlc/bin/mysqld --defaults-file=/opt/mysqlcluster/deploy/conf/my.cnf --user=root &
+	# (MASTER - CLUSTER STATUS VERIFICATION): 
+	sudo /opt/mysqlcluster/home/mysqlc/bin/ndb_mgm -e show
+	
+# ANY NODE: log into mysql:
+sudo /opt/mysqlcluster/home/mysqlc/bin/mysql -h 127.0.0.1 -u root
+
+	# ON ALL NODES (CREATE USER):
+	CREATE USER 'test'@'%' IDENTIFIED BY 'testpwd'; 
+	GRANT ALL PRIVILEGES ON * . * TO 'test'@'%' IDENTIFIED BY 'testpwd';
+
+	# MASTER (CREATE DATABASE):
+	CREATE TABLE transactions (
+		id INT primary key,
+		firstname VARCHAR(500) NOT null,
+		lastname VARCHAR(500) NOT null,
+		profession VARCHAR(1000) NOT null
+	) ENGINE=NDB;
+
+# SAKILA INSTALL (ON ALL NODES):
+https://dev.mysql.com/doc/sakila/en/sakila-installation.html
+
+# SHUTDOWN:
+	
+	# MASTER:
+	sudo /opt/mysqlcluster/home/mysqlc/bin/ndb_mgm -e "SHUTDOWN"
+	# ERROR: if a mysqld process interfers with the execution of the cluster: 
+	ps aux | grep mysqld
+	sudo killall -9 mysqld mysqld_safe

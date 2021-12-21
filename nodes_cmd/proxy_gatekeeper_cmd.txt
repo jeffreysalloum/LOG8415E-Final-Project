@@ -1,0 +1,10 @@
+## PROXY
+sudo apt update 
+sudo apt install python3-pip
+pip3 install mysql-connector-python
+# CREATE proxy.py, cluster.cfg
+# VERIFY python3 IS INSTALLED
+
+## POWERAPI
+# CREATE gatekeeper.py, cluster.cfg
+# VERIFY python3 IS INSTALLED
